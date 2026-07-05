@@ -198,8 +198,51 @@
     font-family: var(--font-mono); font-size:0.78rem; color: var(--ink-faint);
     display:flex; align-items:center; gap:8px;
   }
-  .rec-dot{ width:7px;height:7px;border-radius:50%; background: var(--red); animation: pulse 1.2s infinite; }
-  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:0.25;} }
+
+  /* ---------- Escenario de la demo (visualmente diferenciado) ---------- */
+  .demo-stage{
+    max-width: 640px;
+    margin: 0 auto;
+    position: relative;
+    padding-top: 6px;
+  }
+  .demo-tag{
+    position:absolute;
+    top: -14px; left: 16px;
+    background: var(--navy-deep);
+    color:#fff;
+    font-family: var(--font-mono);
+    font-size:0.66rem;
+    font-weight:600;
+    letter-spacing:0.1em;
+    padding: 4px 10px;
+    border-radius: 20px;
+    z-index: 5;
+  }
+  .sheet--demo{
+    border: 1.5px dashed var(--accent);
+    transform: scale(0.96);
+    transform-origin: top center;
+    font-size: 0.92rem;
+  }
+  .sheet--demo table.fin{ font-size: 0.78rem; }
+  .sheet--demo .sheet-chrome{ position: relative; overflow: visible; }
+  .btn-sm{ padding: 7px 14px; font-size: 0.78rem; }
+  .btn-sm svg{ width:13px; height:13px; }
+  #demo-fake-import.is-active{ background: var(--navy); color:#fff; border-color: var(--navy); }
+  .demo-cursor{
+    position:absolute;
+    top: 12px; left: -30px;
+    width: 20px; height: 20px;
+    opacity: 0;
+    color: var(--navy-deep);
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.35));
+    transition: left 0.9s cubic-bezier(.4,0,.2,1), top 0.9s cubic-bezier(.4,0,.2,1), opacity 0.35s ease, transform 0.2s ease;
+    z-index: 20;
+    pointer-events:none;
+  }
+  .demo-cursor.is-visible{ opacity:1; }
+  .demo-cursor.is-clicking{ transform: scale(0.8); }
 
   table.fin{
     width:100%;
@@ -233,6 +276,8 @@
     color: var(--ink);
   }
   table.fin tbody tr.subtotal td{ font-weight:700; background: var(--surface-2); }
+  table.fin tbody tr.pct-row td{ font-style:italic; color: var(--ink-soft); font-size:0.82em; }
+  table.fin tbody tr.pct-row td:first-child{ padding-left: 34px; }
   table.fin tbody tr.blank td{ padding:6px; border-bottom:1px solid var(--border); }
   table.fin tbody tr{ opacity:0; transform: translateY(4px); }
   table.fin tbody tr.show{ opacity:1; transform:translateY(0); transition: all .4s ease; }
@@ -462,21 +507,30 @@
 <section class="page" id="page-2">
   <div class="wrap">
     <h2 class="page-title">Mirá cómo se completa solo</h2>
-    <p class="page-desc">Así se ve el Estado de Resultados apenas cierra el mes: la planilla se completa automáticamente y cada fila queda marcada según si está dentro o fuera de presupuesto.</p>
+    <p class="page-desc">Así se ve el Estado de Resultados apenas cierra el mes: al importar los datos, la planilla se completa automáticamente y cada fila queda marcada según si está dentro o fuera de presupuesto.</p>
 
-    <div class="sheet">
-      <div class="sheet-chrome">
-        <div class="sheet-dots"><span></span><span></span><span></span></div>
-        <div class="sheet-filename">Estado_de_Resultados.xlsx</div>
-        <div class="sheet-timer"><span class="rec-dot"></span><span id="demo-clock">0:00 / 0:40</span></div>
+    <div class="demo-stage">
+      <div class="demo-tag">● DEMO</div>
+      <div class="sheet sheet--demo">
+        <div class="sheet-chrome">
+          <div class="sheet-dots"><span></span><span></span><span></span></div>
+          <div class="sheet-filename">Estado_de_Resultados.xlsx</div>
+          <button class="btn btn-ghost btn-sm" id="demo-fake-import" tabindex="-1">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+            Importar
+          </button>
+          <div class="demo-cursor" id="demo-cursor">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 2l6.5 18 2.3-7.2L20 10.5z"/></svg>
+          </div>
+        </div>
+        <table class="fin" id="demo-table">
+          <thead>
+            <tr><th>Concepto</th><th>Real (USD miles)</th><th>Presupuesto (USD miles)</th><th>Variación %</th><th>Estado</th></tr>
+          </thead>
+          <tbody id="demo-tbody"></tbody>
+        </table>
+        <div class="progress-track"><div class="progress-fill" id="demo-progress"></div></div>
       </div>
-      <table class="fin" id="demo-table">
-        <thead>
-          <tr><th>Concepto</th><th>Real (USD miles)</th><th>Presupuesto (USD miles)</th><th>Variación %</th><th>Estado</th></tr>
-        </thead>
-        <tbody id="demo-tbody"></tbody>
-      </table>
-      <div class="progress-track"><div class="progress-fill" id="demo-progress"></div></div>
     </div>
 
     <div class="continue-row" id="demo-continue">
@@ -629,7 +683,7 @@
 
 <script>
   // ---------- Datos: Estado de Resultados ----------
-  const plRows = [
+  const plRowsBase = [
     { name:"Ventas",                       real:12450, pres:12000, ok:true  },
     { name:"CMV",                          real:7650,  pres:7200,  ok:false },
     { name:"Margen bruto",                 real:4800,  pres:4800,  ok:true, subtotal:true },
@@ -640,6 +694,29 @@
     { name:"Otros ingresos y egresos",     real:30,    pres:50,    ok:false },
     { name:"Resultado antes de impuestos", real:2290,  pres:2300,  ok:true, subtotal:true },
   ];
+
+  // Filas derivadas: % del renglón sobre Ventas (Real y Presupuesto)
+  function pctOfSalesRow(name, target, ventas){
+    const realPct = (target.real / ventas.real) * 100;
+    const presPct = (target.pres / ventas.pres) * 100;
+    const diffPts = realPct - presPct;
+    return { name, isPct:true, realPct, presPct, diffPts, ok: diffPts >= -1 };
+  }
+
+  const ventasRow = plRowsBase[0];
+  const plRows = [];
+  plRowsBase.forEach(row => {
+    plRows.push(row);
+    if(row.name === "Margen bruto"){
+      plRows.push(pctOfSalesRow("% de ganancia bruta", row, ventasRow));
+    }
+    if(row.name === "Resultado operativo"){
+      plRows.push(pctOfSalesRow("% de ganancia operativa", row, ventasRow));
+    }
+    if(row.name === "Resultado antes de impuestos"){
+      plRows.push(pctOfSalesRow("% de resultado", row, ventasRow));
+    }
+  });
 
   // ---------- Datos: Situación Patrimonial ----------
   const bsRows = [
@@ -678,6 +755,10 @@
     const sign = v > 0 ? "+" : "";
     return sign + v.toFixed(1) + "%";
   }
+  function fmtPts(v){
+    const sign = v > 0 ? "+" : "";
+    return sign + v.toFixed(1) + " pts";
+  }
   function statusIcon(ok){
     return ok
       ? '<span class="status-icon ok">&#10003;</span>'
@@ -687,6 +768,15 @@
   function buildRowHTML(row){
     if(row.blank){
       return '<tr class="blank"><td></td><td></td><td></td><td></td><td></td></tr>';
+    }
+    if(row.isPct){
+      return `<tr class="pct-row">
+        <td>${row.name}</td>
+        <td>${row.realPct.toFixed(1)}%</td>
+        <td>${row.presPct.toFixed(1)}%</td>
+        <td class="var-cell">${fmtPts(row.diffPts)}</td>
+        <td>${statusIcon(row.ok)}</td>
+      </tr>`;
     }
     const v = variance(row.real, row.pres);
     return `<tr class="${row.subtotal ? 'subtotal' : ''}">
@@ -738,67 +828,117 @@
     clearDemoTimers();
     const tbody = document.getElementById('demo-tbody');
     const progress = document.getElementById('demo-progress');
-    const clock = document.getElementById('demo-clock');
     const continueRow = document.getElementById('demo-continue');
+    const cursor = document.getElementById('demo-cursor');
+    const fakeBtn = document.getElementById('demo-fake-import');
+
     tbody.innerHTML = '';
     continueRow.classList.remove('show');
+    progress.style.transition = 'none';
     progress.style.width = '0%';
+    cursor.classList.remove('is-visible', 'is-clicking');
+    cursor.style.left = '-30px';
+    cursor.style.top = '12px';
+    fakeBtn.classList.remove('is-active');
 
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if(reduceMotion){
-      tbody.innerHTML = plRows.map(buildRowHTML).join('');
-      tbody.querySelectorAll('tr').forEach(tr => tr.classList.add('show'));
-      progress.style.width = '100%';
-      clock.textContent = '0:40 / 0:40';
-      continueRow.classList.add('show');
-      return;
-    }
 
-    const totalDuration = 40000; // 40s
-    const tailBuffer = 4000; // deja margen antes de mostrar "Continuar"
-    const perRow = (totalDuration - tailBuffer) / plRows.length;
-
-    // Pre-crea las filas vacías (para animar los números)
+    // Pre-crea las filas vacías (se completan progresivamente)
     const rowEls = plRows.map(row => {
       const tr = document.createElement('tr');
       if(row.subtotal) tr.classList.add('subtotal');
-      tr.innerHTML = `<td>${row.name}</td><td class="cell-real">0</td><td class="cell-pres">0</td><td class="cell-var var-cell">—</td><td class="cell-status"></td>`;
+      if(row.isPct) tr.classList.add('pct-row');
+      const zeroReal = row.isPct ? '0.0%' : '0';
+      const zeroPres = row.isPct ? '0.0%' : '0';
+      tr.innerHTML = `<td>${row.name}</td><td class="cell-real">${zeroReal}</td><td class="cell-pres">${zeroPres}</td><td class="cell-var var-cell">—</td><td class="cell-status"></td>`;
       tbody.appendChild(tr);
       return tr;
     });
 
-    // Progress bar y reloj
-    progress.style.transition = `width ${totalDuration}ms linear`;
-    requestAnimationFrame(() => { progress.style.width = '100%'; });
+    const totalDuration = 42000;
+    const introDuration = reduceMotion ? 500 : 2600; // secuencia del cursor haciendo clic en "Importar"
+    const tailBuffer = 3000; // margen antes de mostrar "Continuar"
+    const perRow = (totalDuration - introDuration - tailBuffer) / plRows.length;
 
-    let elapsed = 0;
-    const clockTimer = setInterval(() => {
-      elapsed += 200;
-      const s = Math.min(40, Math.round(elapsed / 1000));
-      clock.textContent = `0:${s.toString().padStart(2,'0')} / 0:40`;
-      if(elapsed >= totalDuration) clearInterval(clockTimer);
-    }, 200);
-    demoTimers.push(clockTimer);
-
-    plRows.forEach((row, i) => {
-      const t = setTimeout(() => {
-        const tr = rowEls[i];
-        tr.classList.add('show');
-        animateNumber(tr.querySelector('.cell-real'), row.real, 900);
-        animateNumber(tr.querySelector('.cell-pres'), row.pres, 900);
-        setTimeout(() => {
-          const v = variance(row.real, row.pres);
-          tr.querySelector('.cell-var').textContent = fmtPct(v);
-          tr.querySelector('.cell-status').innerHTML = statusIcon(row.ok);
-        }, 900);
-      }, i * perRow + 300);
-      demoTimers.push(t);
+    requestAnimationFrame(() => {
+      progress.style.transition = `width ${totalDuration}ms linear`;
+      progress.style.width = '100%';
     });
 
-    const finishTimer = setTimeout(() => {
-      continueRow.classList.add('show');
-    }, totalDuration - 800);
-    demoTimers.push(finishTimer);
+    function loadRows(){
+      plRows.forEach((row, i) => {
+        const t = setTimeout(() => {
+          const tr = rowEls[i];
+          tr.classList.add('show');
+          if(row.isPct){
+            tr.querySelector('.cell-real').textContent = row.realPct.toFixed(1) + '%';
+            tr.querySelector('.cell-pres').textContent = row.presPct.toFixed(1) + '%';
+          } else if(reduceMotion){
+            tr.querySelector('.cell-real').textContent = fmt(row.real);
+            tr.querySelector('.cell-pres').textContent = fmt(row.pres);
+          } else {
+            animateNumber(tr.querySelector('.cell-real'), row.real, 900);
+            animateNumber(tr.querySelector('.cell-pres'), row.pres, 900);
+          }
+          const revealDelay = (row.isPct || reduceMotion) ? 150 : 900;
+          const revealTimer = setTimeout(() => {
+            if(row.isPct){
+              tr.querySelector('.cell-var').textContent = fmtPts(row.diffPts);
+            } else {
+              tr.querySelector('.cell-var').textContent = fmtPct(variance(row.real, row.pres));
+            }
+            tr.querySelector('.cell-status').innerHTML = statusIcon(row.ok);
+          }, revealDelay);
+          demoTimers.push(revealTimer);
+        }, introDuration + i * perRow + 200);
+        demoTimers.push(t);
+      });
+
+      const finishTimer = setTimeout(() => {
+        continueRow.classList.add('show');
+      }, totalDuration - 700);
+      demoTimers.push(finishTimer);
+    }
+
+    if(reduceMotion){
+      // Sin movimiento de cursor: solo un resalte breve del botón antes de cargar
+      fakeBtn.classList.add('is-active');
+      const t = setTimeout(() => {
+        fakeBtn.classList.remove('is-active');
+        loadRows();
+      }, introDuration);
+      demoTimers.push(t);
+      return;
+    }
+
+    // Secuencia: el cursor entra, se desplaza hasta "Importar" y hace clic
+    cursor.classList.add('is-visible');
+    const t1 = setTimeout(() => {
+      const btnRect = fakeBtn.getBoundingClientRect();
+      const chromeRect = fakeBtn.closest('.sheet-chrome').getBoundingClientRect();
+      cursor.style.left = (btnRect.left - chromeRect.left + btnRect.width / 2 - 6) + 'px';
+      cursor.style.top = (btnRect.top - chromeRect.top + btnRect.height / 2 - 4) + 'px';
+    }, 200);
+    demoTimers.push(t1);
+
+    const t2 = setTimeout(() => {
+      cursor.classList.add('is-clicking');
+      fakeBtn.classList.add('is-active');
+    }, 1300);
+    demoTimers.push(t2);
+
+    const t3 = setTimeout(() => {
+      cursor.classList.remove('is-clicking');
+      fakeBtn.classList.remove('is-active');
+    }, 1600);
+    demoTimers.push(t3);
+
+    const t4 = setTimeout(() => {
+      cursor.classList.remove('is-visible');
+    }, 2100);
+    demoTimers.push(t4);
+
+    loadRows();
   }
 
   function animateNumber(el, target, duration){

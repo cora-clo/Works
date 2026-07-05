@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Budget Controller — Tu budget bajo control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #F4F6F8;
+    --surface: #FFFFFF;
+    --surface-2: #EDF1F4;
+    --border: #DEE3E8;
+    --ink: #16222E;
+    --ink-soft: #5B6772;
+    --ink-faint: #8A94A0;
+    --navy: #0E3555;
+    --navy-deep: #0A2740;
+    --accent: #B07F35;
+    --accent-soft: #F1E3C9;
+    --green: #1D7A50;
+    --green-bg: #E3F3EA;
+    --red: #AF3B2E;
+    --red-bg: #FBE9E6;
+    --radius: 10px;
+    --shadow: 0 1px 2px rgba(14,53,85,0.06), 0 8px 24px rgba(14,53,85,0.08);
+    --font-display: "Fraunces", serif;
+    --font-body: "Inter", -apple-system, sans-serif;
+    --font-mono: "IBM Plex Mono", monospace;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--ink);
+    line-height:1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  a{color:inherit;}
+  button{font-family:inherit;}
+
+  /* ---------- Topbar ---------- */
+  .topbar{
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 18px 32px;
+    background: rgba(244,246,248,0.9);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+  .brand{
+    display:flex; align-items:center; gap:10px;
+    font-family: var(--font-display);
+    font-weight:600; font-size:1.15rem;
+    letter-spacing:-0.01em;
+    cursor:pointer;
+    user-select:none;
+  }
+  .brand .mark{
+    width:26px;height:26px;border-radius:6px;
+    background: linear-gradient(155deg, var(--navy), var(--navy-deep));
+    display:flex;align-items:center;justify-content:center;
+    color:#fff; font-family:var(--font-mono); font-size:0.7rem; font-weight:600;
+  }
+  .dots{ display:flex; gap:8px; align-items:center; }
+  .dot{
+    width:8px;height:8px;border-radius:50%;
+    background: var(--border);
+    cursor:pointer;
+    transition: all .25s ease;
+    border:none;
+    padding:0;
+  }
+  .dot.active{ background: var(--navy); width:22px; border-radius:5px; }
+  .dot.done{ background: var(--accent); }
+
+  /* ---------- Pages ---------- */
+  .page{
+    display:none;
+    min-height: calc(100vh - 64px);
+    padding: 56px 32px 72px;
+  }
+  .page.active{ display:block; animation: fadeIn .5s ease; }
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+
+  .wrap{ max-width: 1100px; margin:0 auto; }
+
+  /* ---------- Page 1: Landing ---------- */
+  .hero{
+    display:grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap:56px;
+    align-items:center;
+    padding-top: 24px;
+  }
+  .eyebrow{
+    font-family: var(--font-mono);
+    text-transform:uppercase;
+    letter-spacing:0.14em;
+    font-size:0.72rem;
+    color: var(--accent);
+    font-weight:600;
+    margin-bottom:18px;
+  }
+  h1.headline{
+    font-family: var(--font-display);
+    font-size: clamp(2.2rem, 4vw, 3.4rem);
+    line-height:1.05;
+    font-weight:600;
+    letter-spacing:-0.01em;
+    margin:0 0 20px;
+    color: var(--navy-deep);
+  }
+  .sub{
+    font-size:1.08rem;
+    color: var(--ink-soft);
+    max-width:46ch;
+    margin:0 0 32px;
+  }
+  .cta-row{ display:flex; gap:14px; flex-wrap:wrap; margin-bottom:40px; }
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding: 13px 24px;
+    border-radius: 8px;
+    font-weight:600;
+    font-size:0.95rem;
+    cursor:pointer;
+    border:1px solid transparent;
+    transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+    text-decoration:none;
+  }
+  .btn:active{ transform: translateY(1px); }
+  .btn-primary{ background: var(--navy); color:#fff; }
+  .btn-primary:hover{ background: var(--navy-deep); box-shadow: var(--shadow); }
+  .btn-ghost{ background: transparent; color: var(--navy); border-color: var(--border); }
+  .btn-ghost:hover{ border-color: var(--navy); background: var(--surface-2); }
+  .btn-accent{ background: var(--accent); color:#fff; }
+  .btn-accent:hover{ background:#9A6E2C; box-shadow: var(--shadow); }
+  .btn svg{ width:16px; height:16px; }
+
+  .trust-line{ font-size:0.85rem; color: var(--ink-faint); }
+
+  .feature-list{ display:flex; flex-direction:column; gap:2px; }
+  .feature-card{
+    background: var(--surface);
+    border:1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    display:flex; gap:16px; align-items:flex-start;
+    margin-bottom:14px;
+  }
+  .feature-icon{
+    flex:none;
+    width:38px;height:38px;border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    background: var(--surface-2);
+    color: var(--navy);
+  }
+  .feature-card h3{ margin:0 0 4px; font-size:0.98rem; font-weight:600; }
+  .feature-card p{ margin:0; font-size:0.87rem; color: var(--ink-soft); }
+
+  .section-label{
+    font-family: var(--font-mono);
+    font-size:0.72rem;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color: var(--ink-faint);
+    margin: 64px 0 18px;
+  }
+
+  /* ---------- Sheet / table mock ---------- */
+  .sheet{
+    background: var(--surface);
+    border:1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    overflow:hidden;
+  }
+  .sheet-chrome{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 18px;
+    background: var(--surface-2);
+    border-bottom:1px solid var(--border);
+  }
+  .sheet-dots{ display:flex; gap:6px; }
+  .sheet-dots span{ width:10px;height:10px;border-radius:50%; }
+  .sheet-dots span:nth-child(1){ background:#E28A7B; }
+  .sheet-dots span:nth-child(2){ background:#EFCB7B; }
+  .sheet-dots span:nth-child(3){ background:#8FBF9B; }
+  .sheet-filename{
+    font-family: var(--font-mono); font-size:0.78rem; color: var(--ink-soft);
+  }
+  .sheet-timer{
+    font-family: var(--font-mono); font-size:0.78rem; color: var(--ink-faint);
+    display:flex; align-items:center; gap:8px;
+  }
+  .rec-dot{ width:7px;height:7px;border-radius:50%; background: var(--red); animation: pulse 1.2s infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:0.25;} }
+
+  table.fin{
+    width:100%;
+    border-collapse:collapse;
+    font-family: var(--font-mono);
+    font-size:0.88rem;
+  }
+  table.fin thead th{
+    text-align:right;
+    padding:12px 20px;
+    background: var(--surface-2);
+    color: var(--ink-soft);
+    font-weight:600;
+    font-size:0.72rem;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    border-bottom:1px solid var(--border);
+  }
+  table.fin thead th:first-child{ text-align:left; }
+  table.fin tbody td{
+    padding:11px 20px;
+    text-align:right;
+    border-bottom:1px solid var(--border);
+    color: var(--ink);
+    white-space:nowrap;
+  }
+  table.fin tbody td:first-child{
+    text-align:left;
+    font-family: var(--font-body);
+    font-size:0.86rem;
+    color: var(--ink);
+  }
+  table.fin tbody tr.subtotal td{ font-weight:700; background: var(--surface-2); }
+  table.fin tbody tr.blank td{ padding:6px; border-bottom:1px solid var(--border); }
+  table.fin tbody tr{ opacity:0; transform: translateY(4px); }
+  table.fin tbody tr.show{ opacity:1; transform:translateY(0); transition: all .4s ease; }
+  table.fin.static-table tbody tr{ opacity:1; transform:none; }
+
+  .status-icon{ display:inline-flex; align-items:center; justify-content:center; width:24px;height:24px;border-radius:50%; font-size:0.8rem; font-weight:700; }
+  .status-icon.ok{ background: var(--green-bg); color: var(--green); }
+  .status-icon.bad{ background: var(--red-bg); color: var(--red); }
+  .var-up{ color: var(--ink); }
+  .var-cell{ font-weight:600; }
+
+  .progress-track{
+    height:4px; background: var(--surface-2);
+    border-top:1px solid var(--border);
+  }
+  .progress-fill{
+    height:100%; width:0%; background: linear-gradient(90deg, var(--accent), var(--navy));
+    transition: width 0.2s linear;
+  }
+
+  .continue-row{
+    display:flex; justify-content:center; margin-top:34px;
+    opacity:0; transition: opacity .6s ease;
+  }
+  .continue-row.show{ opacity:1; }
+
+  .page-footer-action{ display:flex; justify-content:flex-end; margin-top:34px; }
+
+  .page-header-row{
+    display:flex; align-items:flex-start; justify-content:space-between; gap:24px;
+    margin-bottom: 6px;
+  }
+  .page-header-row .page-title, .page-header-row .page-desc{ margin-bottom:0; }
+  .page-header-row .btn{ flex:none; white-space:nowrap; }
+  .page-header-row + .sheet{ margin-top: 32px; }
+  .header-actions{ display:flex; gap:10px; flex:none; }
+
+  /* ---------- Modal de importación ---------- */
+  .modal-overlay{
+    display:none;
+    position:fixed; inset:0; z-index:200;
+    background: rgba(10,26,40,0.5);
+    align-items:center; justify-content:center;
+    padding: 20px;
+  }
+  .modal-overlay.show{ display:flex; animation: fadeIn .25s ease; }
+  .modal-card{
+    background: var(--surface);
+    border-radius: 14px;
+    width: min(440px, 100%);
+    padding: 26px 26px 24px;
+    box-shadow: 0 20px 50px rgba(10,26,40,0.3);
+  }
+  .modal-head{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:18px;
+  }
+  .modal-head h3{
+    font-family: var(--font-display);
+    font-size:1.2rem; font-weight:600; margin:0; color: var(--navy-deep);
+  }
+  .modal-close{
+    border:none; background:transparent; cursor:pointer;
+    font-size:1.4rem; line-height:1; color: var(--ink-faint);
+    padding:2px 6px; border-radius:6px;
+  }
+  .modal-close:hover{ background: var(--surface-2); color: var(--ink); }
+  .upload-zone{
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 30px 18px;
+    cursor:pointer;
+    color: var(--ink-soft);
+    transition: border-color .2s ease, background .2s ease;
+  }
+  .upload-zone:hover{ border-color: var(--navy); background: var(--surface-2); }
+  .upload-zone svg{ width:26px; height:26px; color: var(--navy); }
+  .upload-text{ font-size:0.88rem; text-align:center; }
+  .upload-filename{
+    font-family: var(--font-mono); font-size:0.8rem; color: var(--navy);
+    text-align:center; margin: 10px 0 0; min-height: 1.1em;
+  }
+  .upload-formats{
+    font-family: var(--font-mono); font-size:0.74rem; color: var(--ink-faint);
+    text-align:center; margin: 12px 0 0; letter-spacing:0.02em;
+  }
+
+  h2.page-title{
+    font-family: var(--font-display);
+    font-size: clamp(1.6rem, 3vw, 2.1rem);
+    font-weight:600;
+    color: var(--navy-deep);
+    margin: 0 0 6px;
+  }
+  p.page-desc{ color: var(--ink-soft); margin:0 0 32px; max-width: 60ch; }
+
+  /* ---------- Pricing ---------- */
+  .pricing-grid{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 22px;
+    margin-top: 20px;
+  }
+  .price-card{
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 30px 26px;
+    display:flex; flex-direction:column;
+    position:relative;
+  }
+  .price-card.highlight{
+    border-color: var(--accent);
+    box-shadow: 0 10px 30px rgba(176,127,53,0.16);
+  }
+  .price-badge{
+    position:absolute; top:-12px; right:24px;
+    background: var(--accent); color:#fff;
+    font-size:0.7rem; font-weight:700; text-transform:uppercase;
+    letter-spacing:0.06em; padding:5px 10px; border-radius:20px;
+  }
+  .price-tier{ font-size:0.8rem; color: var(--ink-faint); font-weight:600; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:10px;}
+  .price-amount{ font-family: var(--font-display); font-size:2.3rem; font-weight:600; color: var(--navy-deep); margin-bottom:2px;}
+  .price-amount span{ font-size:1rem; font-family: var(--font-body); color: var(--ink-soft); font-weight:500; }
+  .price-scope{ font-size:0.88rem; color: var(--ink-soft); margin-bottom:22px; }
+  .price-list{ list-style:none; padding:0; margin:0 0 26px; flex:1; }
+  .price-list li{ font-size:0.88rem; padding:7px 0; border-top:1px solid var(--border); color: var(--ink); }
+  .price-list li:first-child{ border-top:none; }
+
+  footer.site-footer{
+    text-align:center; padding: 30px; color: var(--ink-faint); font-size:0.8rem;
+  }
+
+  @media (max-width: 860px){
+    .hero{ grid-template-columns: 1fr; }
+    .pricing-grid{ grid-template-columns: 1fr; }
+    table.fin{ font-size:0.76rem; }
+    table.fin thead th, table.fin tbody td{ padding:9px 10px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .page.active{ animation:none; }
+    table.fin tbody tr{ transition:none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand" onclick="goTo(1)">
+    <span class="mark">BC</span>
+    Budget Controller
+  </div>
+  <nav class="dots" aria-label="Progreso">
+    <button class="dot" data-n="1" onclick="goTo(1)" aria-label="Página 1"></button>
+    <button class="dot" data-n="2" onclick="goTo(2)" aria-label="Página 2"></button>
+    <button class="dot" data-n="3" onclick="goTo(3)" aria-label="Página 3"></button>
+    <button class="dot" data-n="4" onclick="goTo(4)" aria-label="Página 4"></button>
+    <button class="dot" data-n="5" onclick="goTo(5)" aria-label="Página 5"></button>
+  </nav>
+</header>
+
+<!-- ============ PÁGINA 1 — LANDING ============ -->
+<section class="page" id="page-1">
+  <div class="wrap">
+    <div class="hero">
+      <div>
+        <div class="eyebrow">Presupuesto multi-país · Real vs. Budget</div>
+        <h1 class="headline">Tu budget bajo control.<br>Simple y claro.</h1>
+        <p class="sub">Budget Controller ordena el presupuesto de empresas con subsidiarias en distintos países en un único tablero: cuánto se presupuestó, cuánto se ejecutó, y si cada línea está dentro o fuera de control.</p>
+        <div class="cta-row">
+          <button class="btn btn-accent" onclick="goTo(5)">
+            Quiero probarlo
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </button>
+          <button class="btn btn-ghost" onclick="goTo(2)">
+            Mostrame como funciona
+          </button>
+        </div>
+        <div class="trust-line">Un mismo criterio de control para todas tus subsidiarias, sin importar la moneda local.</div>
+      </div>
+
+      <div class="feature-list">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 13l4-4 3 3 5-6"/></svg>
+          </div>
+          <div>
+            <h3>Real vs. Presupuesto</h3>
+            <p>Cada línea del negocio, comparada mes a mes contra lo presupuestado.</p>
+          </div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 7l-10 10M7 7h10v10"/></svg>
+          </div>
+          <div>
+            <h3>Variación en %</h3>
+            <p>La diferencia siempre expresada como porcentaje, para comparar entre países y monedas.</p>
+          </div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>
+          </div>
+          <div>
+            <h3>Estado con un vistazo</h3>
+            <p>Tilde verde si está dentro de presupuesto, equis roja si se salió de control.</p>
+          </div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+          </div>
+          <div>
+            <h3>Importación directa</h3>
+            <p>Opción de importar la información desde tus sistemas, sin cargar nada a mano.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PÁGINA 2 — DEMO (video simulado) ============ -->
+<section class="page" id="page-2">
+  <div class="wrap">
+    <h2 class="page-title">Mirá cómo se completa solo</h2>
+    <p class="page-desc">Así se ve el Estado de Resultados apenas cierra el mes: la planilla se completa automáticamente y cada fila queda marcada según si está dentro o fuera de presupuesto.</p>
+
+    <div class="sheet">
+      <div class="sheet-chrome">
+        <div class="sheet-dots"><span></span><span></span><span></span></div>
+        <div class="sheet-filename">Estado_de_Resultados.xlsx</div>
+        <div class="sheet-timer"><span class="rec-dot"></span><span id="demo-clock">0:00 / 0:40</span></div>
+      </div>
+      <table class="fin" id="demo-table">
+        <thead>
+          <tr><th>Concepto</th><th>Real (USD miles)</th><th>Presupuesto (USD miles)</th><th>Variación %</th><th>Estado</th></tr>
+        </thead>
+        <tbody id="demo-tbody"></tbody>
+      </table>
+      <div class="progress-track"><div class="progress-fill" id="demo-progress"></div></div>
+    </div>
+
+    <div class="continue-row" id="demo-continue">
+      <button class="btn btn-primary" onclick="goTo(3)">Continuar</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PÁGINA 3 — RESULTADOS ESTÁTICOS ============ -->
+<section class="page" id="page-3">
+  <div class="wrap">
+    <div class="page-header-row">
+      <div>
+        <h2 class="page-title">Estado de Resultados</h2>
+        <p class="page-desc">El mismo detalle que viste en la demo, ahora en su versión final: real, presupuesto, variación y estado de cada línea.</p>
+      </div>
+      <div class="header-actions">
+      <button class="btn btn-ghost" onclick="goBack()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Volver
+      </button>
+      <button class="btn btn-ghost" onclick="openImportModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+        Importar
+      </button>
+      </div>
+    </div>
+
+    <div class="sheet">
+      <div class="sheet-chrome">
+        <div class="sheet-dots"><span></span><span></span><span></span></div>
+        <div class="sheet-filename">Estado_de_Resultados.xlsx</div>
+        <div class="sheet-timer">Cierre de mes</div>
+      </div>
+      <table class="fin static-table" id="static-table-pl">
+        <thead>
+          <tr><th>Concepto</th><th>Real (USD miles)</th><th>Presupuesto (USD miles)</th><th>Variación %</th><th>Estado</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="page-footer-action">
+      <button class="btn btn-primary" onclick="goTo(4)">Ver Situación patrimonial</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PÁGINA 4 — SITUACIÓN PATRIMONIAL ============ -->
+<section class="page" id="page-4">
+  <div class="wrap">
+    <div class="page-header-row">
+      <div>
+        <h2 class="page-title">Situación Patrimonial</h2>
+        <p class="page-desc">Activo, pasivo y patrimonio neto, con el mismo criterio de real, presupuesto y estado de control.</p>
+      </div>
+      <div class="header-actions">
+      <button class="btn btn-ghost" onclick="goBack()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Volver
+      </button>
+      <button class="btn btn-ghost" onclick="openImportModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+        Importar
+      </button>
+      </div>
+    </div>
+
+    <div class="sheet">
+      <div class="sheet-chrome">
+        <div class="sheet-dots"><span></span><span></span><span></span></div>
+        <div class="sheet-filename">Situacion_Patrimonial.xlsx</div>
+        <div class="sheet-timer">Cierre de mes</div>
+      </div>
+      <table class="fin static-table" id="static-table-bs">
+        <thead>
+          <tr><th>Concepto</th><th>Real (USD miles)</th><th>Presupuesto (USD miles)</th><th>Variación %</th><th>Estado</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PÁGINA 5 — PRECIOS ============ -->
+<section class="page" id="page-5">
+  <div class="wrap">
+    <h2 class="page-title">Elegí tu plan</h2>
+    <p class="page-desc">Empezá gratis y escalá a medida que sumás usuarios en tus subsidiarias.</p>
+
+    <div class="pricing-grid">
+      <div class="price-card">
+        <div class="price-tier">Prueba</div>
+        <div class="price-amount">Gratis</div>
+        <div class="price-scope">30 días de acceso completo</div>
+        <ul class="price-list">
+          <li>Todas las funciones habilitadas</li>
+          <li>Usuarios ilimitados durante la prueba</li>
+          <li>Sin tarjeta de crédito</li>
+        </ul>
+        <button class="btn btn-ghost" onclick="goTo(1)">Empezar prueba</button>
+      </div>
+
+      <div class="price-card highlight">
+        <div class="price-badge">Más elegido</div>
+        <div class="price-tier">Mensual</div>
+        <div class="price-amount">USD 5<span>/mes</span></div>
+        <div class="price-scope">Hasta 5 usuarios</div>
+        <ul class="price-list">
+          <li>Real vs. Presupuesto ilimitado</li>
+          <li>Estado de Resultados y Situación Patrimonial</li>
+          <li>Soporte por email</li>
+        </ul>
+        <button class="btn btn-accent" onclick="goTo(1)">Elegir este plan</button>
+      </div>
+
+      <div class="price-card">
+        <div class="price-tier">Mensual</div>
+        <div class="price-amount">USD 12<span>/mes</span></div>
+        <div class="price-scope">De 6 a 15 usuarios</div>
+        <ul class="price-list">
+          <li>Todo lo del plan anterior</li>
+          <li>Múltiples subsidiarias y monedas</li>
+          <li>Soporte prioritario</li>
+        </ul>
+        <button class="btn btn-ghost" onclick="goTo(1)">Elegir este plan</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="site-footer">Budget Controller — Tu budget bajo control. Simple y claro.</footer>
+
+<!-- ============ MODAL: Importar ============ -->
+<div class="modal-overlay" id="import-modal" onclick="if(event.target===this) closeImportModal()">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>Importar información</h3>
+      <button class="modal-close" onclick="closeImportModal()" aria-label="Cerrar">&times;</button>
+    </div>
+    <label class="upload-zone" for="import-file-input">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>
+      <span class="upload-text">Arrastrá tu archivo aquí o hacé clic para elegirlo</span>
+      <input type="file" id="import-file-input" accept=".xlsx,.csv,.pdf" hidden onchange="handleFileSelect(event)">
+    </label>
+    <p class="upload-filename" id="upload-filename"></p>
+    <p class="upload-formats">Formatos admitidos: XLSX, CSV, PDF</p>
+  </div>
+</div>
+
+<script>
+  // ---------- Datos: Estado de Resultados ----------
+  const plRows = [
+    { name:"Ventas",                       real:12450, pres:12000, ok:true  },
+    { name:"CMV",                          real:7650,  pres:7200,  ok:false },
+    { name:"Margen bruto",                 real:4800,  pres:4800,  ok:true, subtotal:true },
+    { name:"Gastos comerciales",           real:1380,  pres:1500,  ok:true  },
+    { name:"Gastos administrativos",       real:950,   pres:900,   ok:false },
+    { name:"Resultado operativo",          real:2470,  pres:2400,  ok:true, subtotal:true },
+    { name:"Resultados financieros",       real:-210,  pres:-150,  ok:false },
+    { name:"Otros ingresos y egresos",     real:30,    pres:50,    ok:false },
+    { name:"Resultado antes de impuestos", real:2290,  pres:2300,  ok:true, subtotal:true },
+  ];
+
+  // ---------- Datos: Situación Patrimonial ----------
+  const bsRows = [
+    { name:"Disponibilidades",                    real:850,  pres:800,  ok:true },
+    { name:"Cuentas por cobrar",                  real:2350, pres:2200, ok:false },
+    { name:"Otros créditos",                      real:380,  pres:400,  ok:true },
+    { name:"Total activo corriente",              real:3580, pres:3400, ok:true, subtotal:true },
+    { name:"Activo fijo",                         real:5150, pres:5200, ok:true },
+    { name:"Otros activos no corrientes",         real:620,  pres:600,  ok:true },
+    { name:"Total activo no corriente",           real:5770, pres:5800, ok:true, subtotal:true },
+    { name:"Total activo",                        real:9350, pres:9200, ok:true, subtotal:true },
+    { blank:true },
+    { name:"Deudas financieras",                  real:1900, pres:1800, ok:false },
+    { name:"Deudas comerciales",                  real:1150, pres:1200, ok:true },
+    { name:"Deudas sociales",                     real:360,  pres:350,  ok:true },
+    { name:"Deudas fiscales",                     real:320,  pres:300,  ok:false },
+    { name:"Otras deudas corrientes",              real:230,  pres:250,  ok:true },
+    { name:"Total pasivo corriente",              real:3960, pres:3900, ok:true, subtotal:true },
+    { name:"Otras deudas no corrientes",          real:780,  pres:800,  ok:true },
+    { name:"Total pasivo no corriente",           real:780,  pres:800,  ok:true, subtotal:true },
+    { name:"Total pasivo",                        real:4740, pres:4700, ok:true, subtotal:true },
+    { name:"Patrimonio neto",                     real:4610, pres:4500, ok:true },
+    { name:"Total Pasivo más Patrimonio Neto",    real:9350, pres:9200, ok:true, subtotal:true },
+  ];
+
+  function fmt(n){
+    const sign = n < 0 ? "-" : "";
+    const abs = Math.abs(Math.round(n));
+    return sign + abs.toLocaleString("es-AR");
+  }
+  function variance(real, pres){
+    if(pres === 0) return 0;
+    return ((real - pres) / Math.abs(pres)) * 100;
+  }
+  function fmtPct(v){
+    const sign = v > 0 ? "+" : "";
+    return sign + v.toFixed(1) + "%";
+  }
+  function statusIcon(ok){
+    return ok
+      ? '<span class="status-icon ok">&#10003;</span>'
+      : '<span class="status-icon bad">&#10005;</span>';
+  }
+
+  function buildRowHTML(row){
+    if(row.blank){
+      return '<tr class="blank"><td></td><td></td><td></td><td></td><td></td></tr>';
+    }
+    const v = variance(row.real, row.pres);
+    return `<tr class="${row.subtotal ? 'subtotal' : ''}">
+      <td>${row.name}</td>
+      <td>${fmt(row.real)}</td>
+      <td>${fmt(row.pres)}</td>
+      <td class="var-cell">${fmtPct(v)}</td>
+      <td>${statusIcon(row.ok)}</td>
+    </tr>`;
+  }
+
+  // Render static tables (pages 3 & 4)
+  document.querySelector('#static-table-pl tbody').innerHTML = plRows.map(buildRowHTML).join('');
+  document.querySelector('#static-table-bs tbody').innerHTML = bsRows.map(buildRowHTML).join('');
+
+  // ---------- Navegación ----------
+  let currentPage = 1;
+  let navHistory = [];
+  let demoTimers = [];
+
+  function goTo(n, skipHistory){
+    if(!skipHistory && currentPage !== n){
+      navHistory.push(currentPage);
+    }
+    currentPage = n;
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + n).classList.add('active');
+    document.querySelectorAll('.dot').forEach(d => {
+      const dn = parseInt(d.dataset.n, 10);
+      d.classList.toggle('active', dn === n);
+      d.classList.toggle('done', dn < n);
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    if(n === 2){ startDemo(); } else { clearDemoTimers(); }
+  }
+
+  function goBack(){
+    const prev = navHistory.pop();
+    goTo(prev !== undefined ? prev : 1, true);
+  }
+
+  function clearDemoTimers(){
+    demoTimers.forEach(t => clearTimeout(t));
+    demoTimers = [];
+  }
+
+  function startDemo(){
+    clearDemoTimers();
+    const tbody = document.getElementById('demo-tbody');
+    const progress = document.getElementById('demo-progress');
+    const clock = document.getElementById('demo-clock');
+    const continueRow = document.getElementById('demo-continue');
+    tbody.innerHTML = '';
+    continueRow.classList.remove('show');
+    progress.style.width = '0%';
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(reduceMotion){
+      tbody.innerHTML = plRows.map(buildRowHTML).join('');
+      tbody.querySelectorAll('tr').forEach(tr => tr.classList.add('show'));
+      progress.style.width = '100%';
+      clock.textContent = '0:40 / 0:40';
+      continueRow.classList.add('show');
+      return;
+    }
+
+    const totalDuration = 40000; // 40s
+    const tailBuffer = 4000; // deja margen antes de mostrar "Continuar"
+    const perRow = (totalDuration - tailBuffer) / plRows.length;
+
+    // Pre-crea las filas vacías (para animar los números)
+    const rowEls = plRows.map(row => {
+      const tr = document.createElement('tr');
+      if(row.subtotal) tr.classList.add('subtotal');
+      tr.innerHTML = `<td>${row.name}</td><td class="cell-real">0</td><td class="cell-pres">0</td><td class="cell-var var-cell">—</td><td class="cell-status"></td>`;
+      tbody.appendChild(tr);
+      return tr;
+    });
+
+    // Progress bar y reloj
+    progress.style.transition = `width ${totalDuration}ms linear`;
+    requestAnimationFrame(() => { progress.style.width = '100%'; });
+
+    let elapsed = 0;
+    const clockTimer = setInterval(() => {
+      elapsed += 200;
+      const s = Math.min(40, Math.round(elapsed / 1000));
+      clock.textContent = `0:${s.toString().padStart(2,'0')} / 0:40`;
+      if(elapsed >= totalDuration) clearInterval(clockTimer);
+    }, 200);
+    demoTimers.push(clockTimer);
+
+    plRows.forEach((row, i) => {
+      const t = setTimeout(() => {
+        const tr = rowEls[i];
+        tr.classList.add('show');
+        animateNumber(tr.querySelector('.cell-real'), row.real, 900);
+        animateNumber(tr.querySelector('.cell-pres'), row.pres, 900);
+        setTimeout(() => {
+          const v = variance(row.real, row.pres);
+          tr.querySelector('.cell-var').textContent = fmtPct(v);
+          tr.querySelector('.cell-status').innerHTML = statusIcon(row.ok);
+        }, 900);
+      }, i * perRow + 300);
+      demoTimers.push(t);
+    });
+
+    const finishTimer = setTimeout(() => {
+      continueRow.classList.add('show');
+    }, totalDuration - 800);
+    demoTimers.push(finishTimer);
+  }
+
+  function animateNumber(el, target, duration){
+    const start = 0;
+    const startTime = performance.now();
+    function tick(now){
+      const p = Math.min(1, (now - startTime) / duration);
+      const eased = 1 - Math.pow(1 - p, 3);
+      const val = start + (target - start) * eased;
+      el.textContent = fmt(val);
+      if(p < 1){ requestAnimationFrame(tick); }
+      else { el.textContent = fmt(target); }
+    }
+    requestAnimationFrame(tick);
+  }
+
+  // ---------- Modal de importación ----------
+  function openImportModal(){
+    document.getElementById('upload-filename').textContent = '';
+    document.getElementById('import-file-input').value = '';
+    document.getElementById('import-modal').classList.add('show');
+  }
+  function closeImportModal(){
+    document.getElementById('import-modal').classList.remove('show');
+  }
+  function handleFileSelect(event){
+    const file = event.target.files[0];
+    const label = document.getElementById('upload-filename');
+    label.textContent = file ? `Seleccionado: ${file.name}` : '';
+  }
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape') closeImportModal();
+  });
+
+  // Estado inicial
+  goTo(1);
+</script>
+
+</body>
+</html>
